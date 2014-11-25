@@ -19,6 +19,13 @@ class TimeEntrySync extends Command {
    */
   const ISSUE_PATTERN = '/#([0-9]*)/m';
 
+  const ISSUE_SYNCED_FLAG = '#synced';
+
+  /**
+   * Number of the match item to get the issue number from.
+   */
+  const ISSUE_PATTERN_MATCH_ID = 1;
+
   /**
    * @var \AJT\Toggl\TogglClient;
    */
@@ -149,21 +156,32 @@ class TimeEntrySync extends Command {
     $output->writeln('Finished.');
   }
 
+  /**
+   * Process list of time entries.
+   *
+   * @param $entries
+   */
   function processTimeEntries($entries) {
 
     $process = array();
 
+    // Get the items to process.
     foreach ($entries as $entry) {
-      $match = array();
 
-      // Skip elements that have no description.
-      if (empty($entry['description'])) {
-        $this->output->writeln(sprintf('<error>Skipped entry %d due to missing description.</error>', $entry['id']));
-      }
       // Get issue number from description.
-      elseif (preg_match(self::ISSUE_PATTERN, $entry['description'], $match)) {
-        $process[$match[1]] = $entry;
-        $this->output->writeln(sprintf("<info>%d:\t %s</info>\t (Issue #%d)", $entry['id'], $entry['description'], $match[1]));
+      if ($issue_id = $this->getIssueNumberFromTimeEntry($entry)) {
+        // Check if the entry is already synced.
+        if ($this->isTimeEntrySynced($entry)) {
+          $this->output->writeln(sprintf("<info>%d:\t %s</info>\t (Issue #%d : SYNCED)", $entry['id'], $entry['description'], $issue_id));
+        }
+        else {
+          $this->output->writeln(sprintf("<comment>%d:\t %s</comment>\t (Issue #%d)", $entry['id'], $entry['description'], $issue_id));
+          // Set item to be process.
+          $process[] = array(
+            'issue' => $issue_id,
+            'entry' => $entry
+          );
+        }
       }
       else {
         $this->output->writeln(sprintf("<error>%d:\t %s\t (No Issue ID found)</error>", $entry['id'], $entry['description']));
@@ -171,10 +189,51 @@ class TimeEntrySync extends Command {
     }
 
     // Confirm before we really process.
-    if (!$this->dialog->askConfirmation($this->output, '<question>Sync entries? [y] </question>', false)) {
+    if (!$this->dialog->askConfirmation($this->output, sprintf('<question> %d entries not synced. Process now? [y] </question>', count($process)), false)) {
       $this->output->writeln('<error>Sync aborted.</error>');
+      return;
     }
 
+    // Process each item.
+    foreach ($process as $processData) {
+      $this->syncTimeEntry($processData['entry'], $processData['issue']);
+    }
+  }
+
+  /**
+   * Extracts the redmine issue number from the description.
+   *
+   * @param $entry
+   * @return null
+   */
+  function getIssueNumberFromTimeEntry($entry) {
+    $match = array();
+    if (isset($entry['description']) && preg_match(self::ISSUE_PATTERN, $entry['description'], $match)) {
+      return $match[self::ISSUE_PATTERN_MATCH_ID];
+    }
+    return NULL;
+  }
+
+  /**
+   * Checks if the time entry is synced, by comparing the description.
+   *
+   * @param $entry
+   */
+  function isTimeEntrySynced($entry) {
+    return strpos($entry['description'], self::ISSUE_SYNCED_FLAG) !== FALSE;
+  }
+
+  /**
+   * Helper to sync a single time entry to redmine.
+   *
+   * @param $entry
+   * @param $issue_id
+   */
+  function syncTimeEntry($entry, $issue_id) {
+    // Write to redmine.
+    $this->output->writeln('Write to redmine');
+    // Update toggl entry with #synced Flag.
+    $this->output->writeln('Update toggl entry');
   }
 
   /**
