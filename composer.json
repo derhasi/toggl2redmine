@@ -1,0 +1,23 @@
+{
+  "name": "derhasi/toggl2redmine",
+  "description": "Command line tool to sync toggl time entries to redmine",
+  "require": {
+    "php": ">=5.4.0",
+    "ajt/guzzle-toggl": "dev-master",
+    "kbsali/redmine-api": "1.5.*",
+    "symfony/console": "2.5.*"
+  },
+  "autoload": {
+    "psr-0": {
+      "": "src/"
+    }
+  },
+  "license": "GPLv3",
+  "authors": [
+    {
+      "name": "Johannes Haseitl",
+      "email": "johannes@undpaul.de"
+    }
+  ]
+}
+
