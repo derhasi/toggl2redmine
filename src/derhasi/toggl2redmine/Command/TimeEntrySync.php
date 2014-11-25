@@ -57,6 +57,11 @@ class TimeEntrySync extends Command {
   protected $output;
 
   /**
+   * @var \Symfony\Component\Console\Helper\ProgressHelper
+   */
+  protected $progress;
+
+  /**
    * {@inheritdoc}
    */
   protected function configure()
@@ -108,6 +113,7 @@ class TimeEntrySync extends Command {
     // Prepare helpers.
     $this->dialog = $this->getHelper('dialog');
     $this->output = $output;
+    $this->progress = $this->getHelper('progress');
 
     // Get our necessary arguments from the input.
     $redmineURL = $input->getArgument('redmineURL');
@@ -207,9 +213,12 @@ class TimeEntrySync extends Command {
     }
 
     // Process each item.
+    $this->progress->start($this->output, count($process));
     foreach ($process as $processData) {
       $this->syncTimeEntry($processData['entry'], $processData['issue']);
+      $this->progress->advance();
     }
+    $this->progress->finish();
   }
 
   /**
