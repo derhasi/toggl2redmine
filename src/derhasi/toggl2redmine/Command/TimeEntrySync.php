@@ -234,14 +234,22 @@ class TimeEntrySync extends Command {
     $duration = $entry['duration'] / 60 / 60;
     $date = new \DateTime($entry['start']);
 
-    $redmine_time_entry = $this->redmineClient->api('time_entry')->create(array(
-      'issue_id' => $issue_id,
-      'spent_on' => $date->format('Y-m-d'),
-      'hours' => $duration,
-      // @todo: activity ID mapping
-      //'activity_id' => 9,
-      'comments' => $entry['description'],
-    ));
+    // Fetch unknown errors, or errors that cannot be quickly changed, llike
+    // - project was archived
+    try {
+      $redmine_time_entry = $this->redmineClient->api('time_entry')->create(array(
+        'issue_id' => $issue_id,
+        'spent_on' => $date->format('Y-m-d'),
+        'hours' => $duration,
+        // @todo: activity ID mapping
+        // 'activity_id' => 9,
+        'comments' => $entry['description'],
+      ));
+    }
+    catch (\Exception $e) {
+      $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry['id'], $entry['description'], $issue_id, $e->getMessage()));
+      return;
+    }
 
     // Check if we got a valid time entry back.
     if (!$redmine_time_entry->id) {
@@ -250,6 +258,8 @@ class TimeEntrySync extends Command {
     }
 
     // Update toggl entry with #synced Flag.
+    // Will fail with not project ID given:
+    // @see https://github.com/arendjantetteroo/guzzle-toggl/pull/4
     $entry['description'] .= ' ' . self::ISSUE_SYNCED_FLAG . "[{$redmine_time_entry->id}]";
     $entry['created_with'] = 'toggl2redmine';
     $ret = $this->togglClient->updateTimeEntry(array(
