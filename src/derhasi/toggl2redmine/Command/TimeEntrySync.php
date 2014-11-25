@@ -15,6 +15,11 @@ use \Symfony\Component\Console\Output\OutputInterface;
 class TimeEntrySync extends Command {
 
   /**
+   *  Issue pattern to get the issue number from (in the first match).
+   */
+  const ISSUE_PATTERN = '/#([0-9]*)/m';
+
+  /**
    * @var \AJT\Toggl\TogglClient;
    */
   protected $togglClient;
@@ -142,22 +147,32 @@ class TimeEntrySync extends Command {
     }
 
     $output->writeln('Finished.');
-
   }
 
   function processTimeEntries($entries) {
 
+    $process = array();
+
     foreach ($entries as $entry) {
+      $match = array();
+
+      // Skip elements that have no description.
       if (empty($entry['description'])) {
-        $this->output->writeln(sprintf('<error>Entry %d has no description.</error>', $entry['id']));
+        $this->output->writeln(sprintf('<error>Skipped entry %d due to missing description.</error>', $entry['id']));
+      }
+      // Get issue number from description.
+      elseif (preg_match(self::ISSUE_PATTERN, $entry['description'], $match)) {
+        $process[$match[1]] = $entry;
+        $this->output->writeln(sprintf("<info>%d:\t %s</info>\t (Issue #%d)", $entry['id'], $entry['description'], $match[1]));
       }
       else {
-        $this->output->writeln(sprintf('<info>Entry %d: %s</info>', $entry['id'], $entry['description']));
+        $this->output->writeln(sprintf("<error>%d:\t %s\t (No Issue ID found)</error>", $entry['id'], $entry['description']));
       }
     }
 
+    // Confirm before we really process.
     if (!$this->dialog->askConfirmation($this->output, '<question>Sync entries? [y] </question>', false)) {
-      $this->output->writeln('<error>Quit</error>');
+      $this->output->writeln('<error>Sync aborted.</error>');
     }
 
   }
