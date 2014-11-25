@@ -37,6 +37,11 @@ class TimeEntrySync extends Command {
   protected $togglCurrentUser;
 
   /**
+   * @var integer
+   */
+  protected $togglWorkspaceID;
+
+  /**
    * @var  \Redmine\Client;
    */
   protected $redmineClient;
@@ -112,6 +117,7 @@ class TimeEntrySync extends Command {
     // Init toggl.
     $this->togglClient = TogglClient::factory(array('api_key' => $tooglAPIKey));
     $this->togglCurrentUser = $this->togglClient->getCurrentUser();
+    $this->togglWorkspaceID = $input->getArgument('togglWorkspaceID');
 
     // Init redmine.
     $this->redmineClient = new \Redmine\Client($redmineURL, $redmineAPIKey);
@@ -300,6 +306,10 @@ class TimeEntrySync extends Command {
       }
       // Time entries that are not finished yet, get removed too.
       elseif (empty($entry['stop'])) {
+        unset($entries[$id]);
+      }
+      // Skip entry if it is not part of the workspace.
+      elseif ($entry['wid'] != $this->togglWorkspaceID) {
         unset($entries[$id]);
       }
     }
