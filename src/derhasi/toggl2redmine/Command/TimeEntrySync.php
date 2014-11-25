@@ -188,6 +188,12 @@ class TimeEntrySync extends Command {
       }
     }
 
+    // Simply proceed if no items are to be processed.
+    if (empty($process)) {
+      $this->output->writeln('<info>All entries synced</info>');
+      return;
+    }
+
     // Confirm before we really process.
     if (!$this->dialog->askConfirmation($this->output, sprintf('<question> %d entries not synced. Process now? [y] </question>', count($process)), false)) {
       $this->output->writeln('<error>Sync aborted.</error>');
