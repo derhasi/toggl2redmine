@@ -2,7 +2,6 @@
 .DS_Store*
 ehthumbs.db
 Thumbs.db
-
 # IDEs
 .buildpath
 .idea
@@ -12,7 +11,7 @@ Thumbs.db
 *.komodoproject
 *.komodotools
 nbproject
-
 # Tools
 .svn
 .sass-cache
+vendor
