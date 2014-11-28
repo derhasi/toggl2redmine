@@ -251,9 +251,6 @@ class TimeEntrySync extends Command {
       return;
     }
 
-    $helper = $this->getHelper('question');
-    $question = new ConfirmationQuestion('Continue with this action?', false);
-
     // Process each item.
     $this->progress->start($this->output, count($process));
     foreach ($process as $processData) {
