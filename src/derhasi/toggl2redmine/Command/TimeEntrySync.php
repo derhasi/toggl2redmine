@@ -3,12 +3,13 @@
 namespace derhasi\toggl2redmine\Command;
 
 use AJT\Toggl\TogglClient;
-use \Symfony\Component\Console\Command\Command;
+use derhasi\toggl2redmine\RedmineTimeEntryActivity;
+use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
-use \Symfony\Component\Console\Input\InputArgument;
-use \Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputArgument;
+use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
-use \Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
@@ -111,6 +112,13 @@ class TimeEntrySync extends Command {
         InputOption::VALUE_REQUIRED,
         'To Date to get Time Entries from',
         'now'
+      )
+      ->addOption(
+        'defaultActivity',
+        NULL,
+        InputOption::VALUE_REQUIRED,
+        'Name of the default redmine activity to use for empty time entry tags',
+        ''
       )
     ;
   }
@@ -216,10 +224,14 @@ class TimeEntrySync extends Command {
     $process = array();
 
     $table = new Table($this->output);
-    $table->setHeaders(array('Issue', 'Description', 'Duration', 'Status'));
+    $table->setHeaders(array('Issue', 'Description', 'Duration', 'Activity', 'Status'));
+
+    $defaultActivity = $this->getDefaultRedmineActivity();
 
     // Get the items to process.
     foreach ($entries as $entry) {
+
+      $activity_type = $this->getRedmineActivityFromTogglEntry($entry);
 
       // Get issue number from description.
       if ($issue_id = $this->getIssueNumberFromTimeEntry($entry)) {
@@ -229,22 +241,35 @@ class TimeEntrySync extends Command {
             $issue_id,
             $entry['description'],
             number_format($entry['duration'] / 60 / 60, 2),
+            ($activity_type) ? $activity_type->name : '',
             '<info>SYNCED</info>'
           ));
         }
-        else {
+        // We only process the item, if we got a valid activity.
+        elseif ($activity_type || $defaultActivity) {
           $table->addRow(array(
             $issue_id,
             $entry['description'],
             number_format($entry['duration'] / 60 / 60, 2),
+            ($activity_type) ? $activity_type->name : sprintf('[ %s ]', $defaultActivity->type),
             '<comment>unsynced</comment>'
           ));
 
           // Set item to be process.
           $process[] = array(
             'issue' => $issue_id,
-            'entry' => $entry
+            'entry' => $entry,
+            'activity' => $activity_type,
           );
+        }
+        else {
+          $table->addRow(array(
+            $issue_id,
+            $entry['description'],
+            number_format($entry['duration'] / 60 / 60, 2),
+            '',
+            '<error>no activity</error>'
+          ));
         }
       }
       else {
@@ -252,6 +277,7 @@ class TimeEntrySync extends Command {
           ' - ',
           $entry['description'],
           number_format($entry['duration'] / 60 / 60, 2),
+          $activity_type->name,
           '<error>No Issue ID found</error>'
         ));
       }
@@ -276,7 +302,7 @@ class TimeEntrySync extends Command {
     // Process each item.
     $this->progress->start($this->output, count($process));
     foreach ($process as $processData) {
-      $this->syncTimeEntry($processData['entry'], $processData['issue']);
+      $this->syncTimeEntry($processData['entry'], $processData['issue'], $processData['activity']);
       $this->progress->advance();
     }
     $this->progress->finish();
@@ -310,8 +336,9 @@ class TimeEntrySync extends Command {
    *
    * @param $entry
    * @param $issue_id
+   * @param \derhasi\toggl2redmine\RedmineTimeEntryActivity $activity
    */
-  function syncTimeEntry($entry, $issue_id) {
+  function syncTimeEntry($entry, $issue_id, RedmineTimeEntryActivity $activity) {
     // Write to redmine.
     $duration = $entry['duration'] / 60 / 60;
     $date = new \DateTime($entry['start']);
@@ -323,8 +350,7 @@ class TimeEntrySync extends Command {
         'issue_id' => $issue_id,
         'spent_on' => $date->format('Y-m-d'),
         'hours' => $duration,
-        // @todo: activity ID mapping
-        'activity_id' => 9,
+        'activity_id' => $activity->id,
         'comments' => $entry['description'],
       ));
     }
@@ -388,17 +414,17 @@ class TimeEntrySync extends Command {
   }
 
   /**
-   * Helper to get a redmine activity ID from entry's tags.
+   * Helper to get a redmine activity from entry's tags.
    *
    * @param array $entry
-   * @return integer
+   * @return \derhasi\toggl2redmine\RedmineTimeEntryActivity
    */
-  protected function getRedmineActivityIDFromTogglEntry($entry) {
+  protected function getRedmineActivityFromTogglEntry($entry) {
     foreach ($entry['tags'] as $tagName) {
-      $red_id = $this->getRedmineActivityByName($tagName);
+      $activity = $this->getRedmineActivityByName($tagName);
 
-      if ($red_id) {
-        return $red_id;
+      if ($activity) {
+        return $activity;
       }
     }
   }
@@ -407,20 +433,32 @@ class TimeEntrySync extends Command {
    * Helper to retrieve the redmine activity ID by name.
    *
    * @param string $name
-   * @return mixed
+   * @return \derhasi\toggl2redmine\RedmineTimeEntryActivity
    */
-  protected function getRedmineActivityIDByName($name) {
+  protected function getRedmineActivityByName($name) {
     static $redmineActivities;
 
     if (!isset($redmineActivities)) {
       $act = $this->redmineClient->api('time_entry_activity')->all()['time_entry_activities'];
       foreach ($act as $activity) {
-        $redmineActivities[$activity['name']] = $activity['id'];
+        $redmineActivities[$activity['name']] = new RedmineTimeEntryActivity($activity['id'], $activity['name']);
       }
     }
 
     if (isset($redmineActivities[$name])) {
       return $redmineActivities[$name];
+    }
+  }
+
+  /**
+   * Helper to get default redmine activity from command line.
+   *
+   * @return RedmineTimeEntryActivity
+   */
+  protected function getDefaultRedmineActivity() {
+    $name = $this->input->getOption('defaultActivity');
+    if ($name) {
+      return $this->getRedmineActivityByName($name);
     }
   }
 
