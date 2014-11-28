@@ -364,4 +364,42 @@ class TimeEntrySync extends Command {
 
     return $entries;
   }
+
+  /**
+   * Helper to get a redmine activity ID from entry's tags.
+   *
+   * @param array $entry
+   * @return integer
+   */
+  protected function getRedmineActivityIDFromTogglEntry($entry) {
+    foreach ($entry['tags'] as $tagName) {
+      $red_id = $this->getRedmineActivityByName($tagName);
+
+      if ($red_id) {
+        return $red_id;
+      }
+    }
+  }
+
+  /**
+   * Helper to retrieve the redmine activity ID by name.
+   *
+   * @param string $name
+   * @return mixed
+   */
+  protected function getRedmineActivityIDByName($name) {
+    static $redmineActivities;
+
+    if (!isset($redmineActivities)) {
+      $act = $this->redmineClient->api('time_entry_activity')->all()['time_entry_activities'];
+      foreach ($act as $activity) {
+        $redmineActivities[$activity['name']] = $activity['id'];
+      }
+    }
+
+    if (isset($redmineActivities[$name])) {
+      return $redmineActivities[$name];
+    }
+  }
+
 }
