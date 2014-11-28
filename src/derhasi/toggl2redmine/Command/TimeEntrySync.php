@@ -180,6 +180,7 @@ class TimeEntrySync extends Command {
       }
       else {
         $output->writeln(sprintf('<info>%d entries given.</info>', count($entries)));
+        $this->fixTimeEntries($entries);
         $this->processTimeEntries($entries);
       }
 
@@ -328,12 +329,11 @@ class TimeEntrySync extends Command {
    * @param $entry
    */
   function isTimeEntrySynced($entry) {
-    // Nowadays we marke the entry with a tag.
+    // Nowadays we mark the entry with a tag.
     if (!empty($entry['tags']) && array_search(self::ISSUE_SYNCED_FLAG, $entry['tags']) !== FALSE) {
       return TRUE;
     }
-    // legacy support for the old description based tag.
-    return strpos($entry['description'], self::ISSUE_SYNCED_FLAG) !== FALSE;
+    return FALSE;
   }
 
   /**
@@ -373,17 +373,8 @@ class TimeEntrySync extends Command {
     // Update toggl entry with #synced Flag.
     // Will fail with not project ID given:
     // @see https://github.com/arendjantetteroo/guzzle-toggl/pull/4
+    $this->saveSynchedTogglTimeEntry($entry);
 
-    // We tag the toggle time entry with the synced flag.
-    $entry['tags'][] = self::ISSUE_SYNCED_FLAG;
-    $entry['created_with'] = 'toggl2redmine';
-    $ret = $this->togglClient->updateTimeEntry(array(
-      'id' => $entry['id'],
-      'time_entry' => $entry,
-    ));
-    if (empty($ret)) {
-      $this->output->writeln(sprintf('<error>Updating toggl entry %d failed: %s', $entry['id'], $entry['description']));
-    }
   }
 
   /**
@@ -468,5 +459,50 @@ class TimeEntrySync extends Command {
       return $this->getRedmineActivityByName($name);
     }
   }
+
+  /**
+   * Checks if entries need to be fixed and updates those entries.
+   *
+   * Currently this is needed for the old sync marker in the entry description.
+   *
+   * @param $entries
+   */
+  protected function fixTimeEntries(&$entries) {
+    foreach ($entries as $id => $entry) {
+
+      // Check if the old sync marker is used.
+      if (strpos($entry['description'], self::ISSUE_SYNCED_FLAG) !== FALSE) {
+        $pattern = '/' . preg_quote(self::ISSUE_SYNCED_FLAG, '/') . '\[[0-9]*\]/';
+        $replaced = preg_replace($pattern, '', $entry['description']);
+        // If the replaced description does not match the original one, we need
+        // to update the time entry.
+        if ($replaced != $entry['description']) {
+          $entry['description'] = $replaced;
+          $this->saveSynchedTogglTimeEntry($entry);
+          // Put the updated entry back.
+          $entries[$id] = $entry;
+        }
+      }
+    }
+  }
+
+  /**
+   * Helper to save a time entry as synched.
+   *
+   * @param $entry
+   */
+  protected function saveSynchedTogglTimeEntry(&$entry) {
+    // We tag the toggle time entry with the synced flag.
+    $entry['tags'][] = self::ISSUE_SYNCED_FLAG;
+    $entry['created_with'] = 'toggl2redmine';
+    $ret = $this->togglClient->updateTimeEntry(array(
+      'id' => $entry['id'],
+      'time_entry' => $entry,
+    ));
+    if (empty($ret)) {
+      $this->output->writeln(sprintf('<error>Updating toggl entry %d failed: %s', $entry['id'], $entry['description']));
+    }
+  }
+
 
 }
