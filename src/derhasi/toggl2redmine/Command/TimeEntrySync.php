@@ -8,6 +8,7 @@ use \Symfony\Component\Console\Input\InputArgument;
 use \Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use \Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 /**
@@ -90,9 +91,10 @@ class TimeEntrySync extends Command {
         InputArgument::REQUIRED,
         'API Key for accessing toggl API'
       )
-      ->addArgument(
-        'togglWorkspaceID',
-        InputArgument::REQUIRED,
+      ->addOption(
+        'workspace',
+        NULL,
+        InputOption::VALUE_REQUIRED,
         'Workspace ID to get time entries from'
       )
       ->addOption(
@@ -130,7 +132,11 @@ class TimeEntrySync extends Command {
     // Init toggl.
     $this->togglClient = TogglClient::factory(array('api_key' => $tooglAPIKey));
     $this->togglCurrentUser = $this->togglClient->getCurrentUser();
-    $this->togglWorkspaceID = $input->getArgument('togglWorkspaceID');
+    $this->togglWorkspaceID = $this->getWorkspaceID();
+    if (empty($this->togglWorkspaceID)) {
+      $this->output->writeln('<error>No Workspace given</error>');
+      return;
+    }
 
     // Init redmine.
     $this->redmineClient = new \Redmine\Client($redmineURL, $redmineAPIKey);
@@ -173,6 +179,30 @@ class TimeEntrySync extends Command {
     }
 
     $output->writeln('Finished.');
+  }
+
+  /**
+   * Get the workspace ID provided by argument or user input.
+   *
+   * @return mixed
+   */
+  protected function getWorkspaceID() {
+    $workspace_id = $this->input->getOption('workspace');
+
+    if (!$workspace_id) {
+      $workspaces = $this->togglClient->getWorkspaces();
+      $options = array();
+      foreach ($workspaces as $i => $workspace) {
+        $options[$i] = $workspace['name'];
+      }
+
+      $workspace_name = $this->question->ask($this->input, $this->output, new ChoiceQuestion('Select your workspace:', $options));
+
+      $index = array_search($workspace_name, $options);
+      $workspace_id = $workspaces[$index]['id'];
+    }
+
+    return $workspace_id;
   }
 
   /**
@@ -275,7 +305,7 @@ class TimeEntrySync extends Command {
         'spent_on' => $date->format('Y-m-d'),
         'hours' => $duration,
         // @todo: activity ID mapping
-        // 'activity_id' => 9,
+        'activity_id' => 9,
         'comments' => $entry['description'],
       ));
     }
