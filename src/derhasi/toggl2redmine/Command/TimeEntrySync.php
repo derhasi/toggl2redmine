@@ -371,10 +371,7 @@ class TimeEntrySync extends Command {
     }
 
     // Update toggl entry with #synced Flag.
-    // Will fail with not project ID given:
-    // @see https://github.com/arendjantetteroo/guzzle-toggl/pull/4
     $this->saveSynchedTogglTimeEntry($entry);
-
   }
 
   /**

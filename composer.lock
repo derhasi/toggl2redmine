@@ -11,12 +11,12 @@
             "source": {
                 "type": "git",
                 "url": "https://github.com/arendjantetteroo/guzzle-toggl.git",
-                "reference": "43f13f6481f79b00cc1d33bfa735e10a4d14b2b2"
+                "reference": "f0700beb800f444b03dbdd881674f0712148e095"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/arendjantetteroo/guzzle-toggl/zipball/43f13f6481f79b00cc1d33bfa735e10a4d14b2b2",
-                "reference": "43f13f6481f79b00cc1d33bfa735e10a4d14b2b2",
+                "url": "https://api.github.com/repos/arendjantetteroo/guzzle-toggl/zipball/f0700beb800f444b03dbdd881674f0712148e095",
+                "reference": "f0700beb800f444b03dbdd881674f0712148e095",
                 "shasum": ""
             },
             "require": {
@@ -51,7 +51,7 @@
                 "api",
                 "toggl"
             ],
-            "time": "2014-10-30 10:14:28"
+            "time": "2014-11-25 17:55:30"
         },
         {
             "name": "guzzle/guzzle",
@@ -248,17 +248,17 @@
         },
         {
             "name": "symfony/event-dispatcher",
-            "version": "v2.5.7",
+            "version": "v2.6.0",
             "target-dir": "Symfony/Component/EventDispatcher",
             "source": {
                 "type": "git",
                 "url": "https://github.com/symfony/EventDispatcher.git",
-                "reference": "bb6fc12085cd195dceaf48016087b12b632df497"
+                "reference": "697331d4ac78668cf6d21a2bb009b3faae92814f"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/bb6fc12085cd195dceaf48016087b12b632df497",
-                "reference": "bb6fc12085cd195dceaf48016087b12b632df497",
+                "url": "https://api.github.com/repos/symfony/EventDispatcher/zipball/697331d4ac78668cf6d21a2bb009b3faae92814f",
+                "reference": "697331d4ac78668cf6d21a2bb009b3faae92814f",
                 "shasum": ""
             },
             "require": {
@@ -267,7 +267,8 @@
             "require-dev": {
                 "psr/log": "~1.0",
                 "symfony/config": "~2.0",
-                "symfony/dependency-injection": "~2.0,<2.6.0",
+                "symfony/dependency-injection": "~2.6",
+                "symfony/expression-language": "~2.6",
                 "symfony/stopwatch": "~2.2"
             },
             "suggest": {
@@ -277,7 +278,7 @@
             "type": "library",
             "extra": {
                 "branch-alias": {
-                    "dev-master": "2.5-dev"
+                    "dev-master": "2.6-dev"
                 }
             },
             "autoload": {
@@ -301,7 +302,7 @@
             ],
             "description": "Symfony EventDispatcher Component",
             "homepage": "http://symfony.com",
-            "time": "2014-10-30 20:17:55"
+            "time": "2014-11-28 10:00:40"
         }
     ],
     "packages-dev": [],
