@@ -4,6 +4,7 @@ namespace derhasi\toggl2redmine\Command;
 
 use AJT\Toggl\TogglClient;
 use \Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\Table;
 use \Symfony\Component\Console\Input\InputArgument;
 use \Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
@@ -214,6 +215,9 @@ class TimeEntrySync extends Command {
 
     $process = array();
 
+    $table = new Table($this->output);
+    $table->setHeaders(array('Issue', 'Description', 'Duration', 'Status'));
+
     // Get the items to process.
     foreach ($entries as $entry) {
 
@@ -221,10 +225,21 @@ class TimeEntrySync extends Command {
       if ($issue_id = $this->getIssueNumberFromTimeEntry($entry)) {
         // Check if the entry is already synced.
         if ($this->isTimeEntrySynced($entry)) {
-          $this->output->writeln(sprintf("<info>%d:\t %s</info>\t (Issue #%d : SYNCED)", $entry['id'], $entry['description'], $issue_id));
+          $table->addRow(array(
+            $issue_id,
+            $entry['description'],
+            number_format($entry['duration'] / 60 / 60, 2),
+            '<info>SYNCED</info>'
+          ));
         }
         else {
-          $this->output->writeln(sprintf("<comment>%d:\t %s</comment>\t (Issue #%d)", $entry['id'], $entry['description'], $issue_id));
+          $table->addRow(array(
+            $issue_id,
+            $entry['description'],
+            number_format($entry['duration'] / 60 / 60, 2),
+            '<comment>unsynced</comment>'
+          ));
+
           // Set item to be process.
           $process[] = array(
             'issue' => $issue_id,
@@ -233,9 +248,16 @@ class TimeEntrySync extends Command {
         }
       }
       else {
-        $this->output->writeln(sprintf("<error>%d:\t %s\t (No Issue ID found)</error>", $entry['id'], $entry['description']));
+        $table->addRow(array(
+          ' - ',
+          $entry['description'],
+          number_format($entry['duration'] / 60 / 60, 2),
+          '<error>No Issue ID found</error>'
+        ));
       }
     }
+
+    $table->render();
 
     // Simply proceed if no items are to be processed.
     if (empty($process)) {
