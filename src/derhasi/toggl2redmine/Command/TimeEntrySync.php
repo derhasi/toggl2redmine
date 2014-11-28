@@ -8,6 +8,7 @@ use \Symfony\Component\Console\Input\InputArgument;
 use \Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use \Symfony\Component\Console\Output\OutputInterface;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
 
 /**
  * Symfony command implementation for converting redmine wikipages to git.
@@ -47,9 +48,14 @@ class TimeEntrySync extends Command {
   protected $redmineClient;
 
   /**
-   * @var \Symfony\Component\Console\Helper\DialogHelper
+   * @var \Symfony\Component\Console\Helper\QuestionHelper
    */
-  protected $dialog;
+  protected $question;
+
+  /**
+   * @var \Symfony\Component\Console\Input\InputInterface
+   */
+  protected $input;
 
   /**
    * @var \Symfony\Component\Console\Output\OutputInterface
@@ -111,7 +117,8 @@ class TimeEntrySync extends Command {
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     // Prepare helpers.
-    $this->dialog = $this->getHelper('dialog');
+    $this->question = $this->getHelper('question');
+    $this->input = $input;
     $this->output = $output;
     $this->progress = $this->getHelper('progress');
 
@@ -207,10 +214,15 @@ class TimeEntrySync extends Command {
     }
 
     // Confirm before we really process.
-    if (!$this->dialog->askConfirmation($this->output, sprintf('<question> %d entries not synced. Process now? [y] </question>', count($process)), false)) {
+    if (!$this->question->ask($this->input, $this->output,
+      new ConfirmationQuestion(sprintf('<question> %d entries not synced. Process now? [y] </question>', count($process)), false))
+    ) {
       $this->output->writeln('<error>Sync aborted.</error>');
       return;
     }
+
+    $helper = $this->getHelper('question');
+    $question = new ConfirmationQuestion('Continue with this action?', false);
 
     // Process each item.
     $this->progress->start($this->output, count($process));
