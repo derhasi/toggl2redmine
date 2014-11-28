@@ -323,11 +323,16 @@ class TimeEntrySync extends Command {
   }
 
   /**
-   * Checks if the time entry is synced, by comparing the description.
+   * Checks if the time entry is synced.
    *
    * @param $entry
    */
   function isTimeEntrySynced($entry) {
+    // Nowadays we marke the entry with a tag.
+    if (!empty($entry['tags']) && array_search(self::ISSUE_SYNCED_FLAG, $entry['tags']) !== FALSE) {
+      return TRUE;
+    }
+    // legacy support for the old description based tag.
     return strpos($entry['description'], self::ISSUE_SYNCED_FLAG) !== FALSE;
   }
 
@@ -368,7 +373,9 @@ class TimeEntrySync extends Command {
     // Update toggl entry with #synced Flag.
     // Will fail with not project ID given:
     // @see https://github.com/arendjantetteroo/guzzle-toggl/pull/4
-    $entry['description'] .= ' ' . self::ISSUE_SYNCED_FLAG . "[{$redmine_time_entry->id}]";
+
+    // We tag the toggle time entry with the synced flag.
+    $entry['tags'][] = self::ISSUE_SYNCED_FLAG;
     $entry['created_with'] = 'toggl2redmine';
     $ret = $this->togglClient->updateTimeEntry(array(
       'id' => $entry['id'],
