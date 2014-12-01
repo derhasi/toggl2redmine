@@ -252,7 +252,7 @@ class TimeEntrySync extends Command {
             $issue_id,
             $entry['description'],
             number_format($entry['duration'] / 60 / 60, 2),
-            ($activity_type) ? $activity_type->name : sprintf('[ %s ]', $defaultActivity->type),
+            ($activity_type) ? $activity_type->name : sprintf('[ %s ]', $defaultActivity->name),
             '<comment>unsynced</comment>'
           ));
 
@@ -260,7 +260,7 @@ class TimeEntrySync extends Command {
           $process[] = array(
             'issue' => $issue_id,
             'entry' => $entry,
-            'activity' => $activity_type,
+            'activity' => ($activity_type) ? $activity_type : $defaultActivity,
           );
         }
         else {
