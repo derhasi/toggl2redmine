@@ -29,7 +29,9 @@ You can run `composer require derhasi/toggl2redmine` in any composer enabled pro
 
 ## Usage
 
-`./toggl2redmine.php time-entry-sync ...`
+Global: `toggl2redmine.php time-entry-sync ...`
+
+Local: `./toggl2redmine time-entry-sync ...`
 
 ```
 Usage:
