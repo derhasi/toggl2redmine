@@ -7,6 +7,9 @@
     "kbsali/redmine-api": "1.5.*",
     "symfony/console": "2.5.*"
   },
+  "bin": [
+    "toggl2redmine"
+  ],
   "autoload": {
     "psr-0": {
       "": "src/"
