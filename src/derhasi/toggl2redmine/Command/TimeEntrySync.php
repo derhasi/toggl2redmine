@@ -153,6 +153,9 @@ class TimeEntrySync extends Command {
     $from = $input->getOption('fromDate');
     $to = $input->getOption('toDate');
 
+    // Before we handle dates, we need to make sure, a default timezone is set.
+    $this->fixTimezone();
+
     $global_from = new \DateTime($from);
     $global_to = new \DateTime($to);
 
@@ -501,5 +504,28 @@ class TimeEntrySync extends Command {
     }
   }
 
+  /**
+   * Helper to temporary fix timezone settings.
+   */
+  protected function fixTimezone() {
+
+    // If no default timezone is set, we set the one from the toggl profile and
+    // otherwise explicitely temporary set the system timezone.
+    if (!ini_get('date.timezone')) {
+      if (!empty($this->togglCurrentUser['timezone'])) {
+        $default = $this->togglCurrentUser['timezone'];
+        date_default_timezone_set($this->togglCurrentUser['timezone']);
+      }
+      elseif ($default = date_default_timezone_get()) {
+        date_default_timezone_set($default);
+      }
+      else {
+        $default = 'UTC';
+        date_default_timezone_set('UTC');
+      }
+
+      $this->output->writeln(sprintf('<comment>Your timezone temporarily was set to "%s", as no default timezone is set in php.ini.</comment>', $default));
+    }
+  }
 
 }
