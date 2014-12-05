@@ -12,6 +12,7 @@ use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ChoiceQuestion;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Question\Question;
 
 /**
  * Symfony command implementation for converting redmine wikipages to git.
@@ -126,12 +127,66 @@ class TimeEntrySync extends Command {
   /**
    * {@inheritdoc}
    */
-  protected function execute(InputInterface $input, OutputInterface $output) {
+  protected function initialize(InputInterface $input, OutputInterface $output) {
     // Prepare helpers.
     $this->question = $this->getHelper('question');
     $this->input = $input;
     $this->output = $output;
     $this->progress = $this->getHelper('progress');
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function interact(InputInterface $input, OutputInterface $output) {
+
+    // redmineURL
+    if (!$input->getArgument('redmineURL')) {
+      $question = new Question('Enter your redmine URL: ');
+
+      $answer = $this->question->ask($input,$output, $question);
+      if ($answer) {
+        $input->setArgument('redmineURL', $answer);
+      }
+      // The argument is required, so we simply quit otherwise.
+      else {
+        return;
+      }
+    }
+
+    // redmineAPIKey
+    if (!$input->getArgument('redmineAPIKey')) {
+      $question = new Question('Enter your redmine API Token: ');
+
+      $answer = $this->question->ask($input,$output, $question);
+      if ($answer) {
+        $input->setArgument('redmineAPIKey', $answer);
+      }
+      // The argument is required, so we simply quit otherwise.
+      else {
+        return;
+      }
+    }
+
+    // tooglAPIKey
+    if (!$input->getArgument('tooglAPIKey')) {
+      $question = new Question('Enter your toggl API Token: ');
+
+      $answer = $this->question->ask($input,$output, $question);
+      if ($answer) {
+        $input->setArgument('tooglAPIKey', $answer);
+      }
+      // The argument is required, so we simply quit otherwise.
+      else {
+        return;
+      }
+    }
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function execute(InputInterface $input, OutputInterface $output) {
 
     // Get our necessary arguments from the input.
     $redmineURL = $input->getArgument('redmineURL');
