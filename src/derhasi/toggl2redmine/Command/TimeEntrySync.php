@@ -3,6 +3,7 @@
 namespace derhasi\toggl2redmine\Command;
 
 use AJT\Toggl\TogglClient;
+use derhasi\toggl2redmine\ConfigWrapper;
 use derhasi\toggl2redmine\RedmineTimeEntryActivity;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
@@ -70,6 +71,11 @@ class TimeEntrySync extends Command {
    * @var \Symfony\Component\Console\Helper\ProgressHelper
    */
   protected $progress;
+
+  /**
+   * @var array
+   */
+  protected $config;
 
   /**
    * {@inheritdoc}
@@ -140,11 +146,22 @@ class TimeEntrySync extends Command {
    */
   protected function interact(InputInterface $input, OutputInterface $output) {
 
+    $config = new ConfigWrapper('time-entry-sync');
+
     // redmineURL
     if (!$input->getArgument('redmineURL')) {
-      $question = new Question('Enter your redmine URL: ');
 
-      $answer = $this->question->ask($input,$output, $question);
+      // Either get value from config file.
+      if ($config->getValueFromConfig('redmineURL')) {
+        $answer = $config->getValueFromConfig('redmineURL');
+      }
+      // Or ask for it.
+      else {
+        $question = new Question('Enter your redmine URL: ');
+
+        $answer = $this->question->ask($input,$output, $question);
+      }
+
       if ($answer) {
         $input->setArgument('redmineURL', $answer);
       }
@@ -582,5 +599,7 @@ class TimeEntrySync extends Command {
       $this->output->writeln(sprintf('<comment>Your timezone temporarily was set to "%s", as no default timezone is set in php.ini.</comment>', $default));
     }
   }
+
+
 
 }

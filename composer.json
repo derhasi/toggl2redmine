@@ -5,7 +5,9 @@
     "php": ">=5.4.0",
     "ajt/guzzle-toggl": ">=0.9",
     "kbsali/redmine-api": "1.5.*",
-    "symfony/console": "2.5.*"
+    "symfony/console": "2.6.*",
+    "symfony/config": "2.6.*",
+    "symfony/yaml": "2.6.*"
   },
   "bin": [
     "toggl2redmine"
