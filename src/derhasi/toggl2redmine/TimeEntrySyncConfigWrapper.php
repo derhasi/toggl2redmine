@@ -2,16 +2,17 @@
 
 namespace derhasi\toggl2redmine;
 
-use derhasi\toggl2redmine\Config\Configuration;
+use derhasi\toggl2redmine\Config\TimeEntrySyncConfiguration;
 use derhasi\toggl2redmine\Config\YamlConfigLoader;
 use Symfony\Component\Config\Definition\Processor;
 use Symfony\Component\Config\FileLocator;
+use Symfony\Component\Yaml\Yaml;
 
 /**
  * Class ConfigWrapper
  * @package derhasi\toggl2redmine
  */
-class ConfigWrapper {
+class TimeEntrySyncConfigWrapper {
 
   const FILENAME = 'toggl2redmine.yml';
 
@@ -21,18 +22,12 @@ class ConfigWrapper {
   protected $processedConfiguration;
 
   /**
-   * @var string
-   */
-  protected $configRoot;
-
-  /**
    * Constructor.
    *
    * @param string $root
    *   Root level key for the confiuration subtree.
    */
-  public function __construct($root) {
-    $this->configRoot = $root;
+  public function __construct() {
   }
 
   /**
@@ -46,8 +41,8 @@ class ConfigWrapper {
       $this->loadConfig();
     }
 
-    if (isset($this->processedConfiguration[$this->configRoot][$name])) {
-      return $this->processedConfiguration[$this->configRoot][$name];
+    if (isset($this->processedConfiguration[$name])) {
+      return $this->processedConfiguration[$name];
     }
   }
 
@@ -68,18 +63,20 @@ class ConfigWrapper {
     // In the case we do not find the config file, we want to silently fail, as
     // we will have a fallback.
     try {
-      $configValues = $loader->load($locator->locate(static::FILENAME, null, false));
+      $location = $locator->locate(static::FILENAME, null, true);
     }
     catch (\Exception $e) {
       // No file found, means no configuration.
-      print $e->getMessage();
       $this->processedConfiguration = array();
       return;
     }
 
+    // Load values.
+    $configValues = $loader->load($location);
+
     // process the array using the defined configuration
     $processor = new Processor();
-    $configuration = new Configuration();
+    $configuration = new TimeEntrySyncConfiguration();
 
     $this->processedConfiguration = $processor->processConfiguration(
       $configuration,

@@ -3,7 +3,7 @@
 namespace derhasi\toggl2redmine\Command;
 
 use AJT\Toggl\TogglClient;
-use derhasi\toggl2redmine\ConfigWrapper;
+use derhasi\toggl2redmine\TimeEntrySyncConfigWrapper;
 use derhasi\toggl2redmine\RedmineTimeEntryActivity;
 use Symfony\Component\Console\Command\Command;
 use Symfony\Component\Console\Helper\Table;
@@ -96,7 +96,7 @@ class TimeEntrySync extends Command {
         'The APIKey for accessing the redmine API'
       )
       ->addArgument(
-        'tooglAPIKey',
+        'togglAPIKey',
         InputArgument::REQUIRED,
         'API Key for accessing toggl API'
       )
@@ -146,7 +146,7 @@ class TimeEntrySync extends Command {
    */
   protected function interact(InputInterface $input, OutputInterface $output) {
 
-    $config = new ConfigWrapper('time-entry-sync');
+    $config = new TimeEntrySyncConfigWrapper();
 
     // redmineURL
     if (!$input->getArgument('redmineURL')) {
@@ -173,9 +173,17 @@ class TimeEntrySync extends Command {
 
     // redmineAPIKey
     if (!$input->getArgument('redmineAPIKey')) {
-      $question = new Question('Enter your redmine API Token: ');
 
-      $answer = $this->question->ask($input,$output, $question);
+      // Either get value from config file.
+      if ($config->getValueFromConfig('redmineAPIKey')) {
+        $answer = $config->getValueFromConfig('redmineAPIKey');
+      }
+      // Or ask for it.
+      else {
+        $question = new Question('Enter your redmine API Token: ');
+        $answer = $this->question->ask($input, $output, $question);
+      }
+
       if ($answer) {
         $input->setArgument('redmineAPIKey', $answer);
       }
@@ -185,13 +193,21 @@ class TimeEntrySync extends Command {
       }
     }
 
-    // tooglAPIKey
-    if (!$input->getArgument('tooglAPIKey')) {
-      $question = new Question('Enter your toggl API Token: ');
+    // togglAPIKey
+    if (!$input->getArgument('togglAPIKey')) {
 
-      $answer = $this->question->ask($input,$output, $question);
+      // Either get value from config file.
+      if ($config->getValueFromConfig('togglAPIKey')) {
+        $answer = $config->getValueFromConfig('togglAPIKey');
+      }
+      // Or ask for it.
+      else {
+        $question = new Question('Enter your toggl API Token: ');
+        $answer = $this->question->ask($input,$output, $question);
+      }
+
       if ($answer) {
-        $input->setArgument('tooglAPIKey', $answer);
+        $input->setArgument('togglAPIKey', $answer);
       }
       // The argument is required, so we simply quit otherwise.
       else {
@@ -208,10 +224,10 @@ class TimeEntrySync extends Command {
     // Get our necessary arguments from the input.
     $redmineURL = $input->getArgument('redmineURL');
     $redmineAPIKey = $input->getArgument('redmineAPIKey');
-    $tooglAPIKey = $input->getArgument('tooglAPIKey');
+    $togglAPIKey = $input->getArgument('togglAPIKey');
 
     // Init toggl.
-    $this->togglClient = TogglClient::factory(array('api_key' => $tooglAPIKey));
+    $this->togglClient = TogglClient::factory(array('api_key' => $togglAPIKey));
     $this->togglCurrentUser = $this->togglClient->getCurrentUser();
     $this->togglWorkspaceID = $this->getWorkspaceID();
     if (empty($this->togglWorkspaceID)) {
