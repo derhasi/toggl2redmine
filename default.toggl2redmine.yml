@@ -1,0 +1,14 @@
+# Default configuration file.
+#
+# With a copy of this file you can provide default parameters for your toggl2redmine command.
+#
+# Copy this configuration file to your current directory as toggl2redmine.yml and update the given parameters to fit
+# your installation.
+#
+# For global configuration put that file at ~/.toggl2redmine/toggl2redmine.yml .
+#
+# Time-entry synchronisation:
+"time-entry-sync":
+ redmineURL: "https://some.redmine.server"
+ redmineAPIKey: "someapikeyforredmine"
+ togglAPIKey: "someapikeyfortoggl"
