@@ -20,6 +20,14 @@ class TimeEntrySyncConfiguration implements ConfigurationInterface
         ->end()
         ->scalarNode('togglAPIKey')
         ->end()
+        ->scalarNode('fromDate')
+        ->end()
+        ->scalarNode('toDate')
+        ->end()
+        ->scalarNode('defaultActivity')
+        ->end()
+        ->scalarNode('workspace')
+        ->end()
       ->end()
     ;
 

@@ -104,28 +104,29 @@ class TimeEntrySync extends Command {
         'workspace',
         NULL,
         InputOption::VALUE_REQUIRED,
-        'Workspace ID to get time entries from'
+        'Workspace ID to get time entries from',
+        NULL
       )
       ->addOption(
         'fromDate',
         NULL,
         InputOption::VALUE_REQUIRED,
-        'From Date to get Time Entries from',
-        '-1 day'
+        'From Date to get Time Entries from (defaults to "-1 day")',
+        NULL
       )
       ->addOption(
         'toDate',
         NULL,
         InputOption::VALUE_REQUIRED,
-        'To Date to get Time Entries from',
-        'now'
+        'To Date to get Time Entries from (defaults to "now")',
+        NULL
       )
       ->addOption(
         'defaultActivity',
         NULL,
         InputOption::VALUE_REQUIRED,
         'Name of the default redmine activity to use for empty time entry tags',
-        ''
+        NULL
       )
     ;
   }
@@ -213,6 +214,74 @@ class TimeEntrySync extends Command {
       else {
         return;
       }
+    }
+
+    // fromDate
+    if (!$input->getOption('fromDate')) {
+
+      // Either get value from config file.
+      if ($config->getValueFromConfig('fromDate')) {
+        $answer = $config->getValueFromConfig('fromDate');
+      }
+      // Or ask for it.
+      else {
+        $question = new Question('Enter "from date" [-1 day]: ', '-1 day');
+        $answer = $this->question->ask($input,$output, $question);
+      }
+
+      if ($answer) {
+        $input->setOption('fromDate', $answer);
+      }
+      // The argument is required, so we simply quit otherwise.
+      else {
+        return;
+      }
+    }
+
+    // toDate
+    if (!$input->getOption('toDate')) {
+
+      // Either get value from config file.
+      if ($config->getValueFromConfig('toDate')) {
+        $answer = $config->getValueFromConfig('toDate');
+      }
+      // Or ask for it.
+      else {
+        $question = new Question('Enter "to date" [now]: ', 'now');
+        $answer = $this->question->ask($input,$output, $question);
+      }
+
+      if ($answer) {
+        $input->setOption('toDate', $answer);
+      }
+      // The argument is required, so we simply quit otherwise.
+      else {
+        return;
+      }
+    }
+
+    // defaultActivity
+    if (!$input->getOption('defaultActivity')) {
+
+      // Either get value from config file.
+      if ($config->getValueFromConfig('defaultActivity')) {
+        $answer = $config->getValueFromConfig('defaultActivity');
+      }
+      // Or ask for it.
+      else {
+        $question = new Question('Name of default activity" []: ', '');
+        $answer = $this->question->ask($input,$output, $question);
+      }
+
+      if ($answer) {
+        $input->setOption('defaultActivity', $answer);
+      }
+    }
+
+    // workspace: interaction will take place in ->execute, as currently we are
+    // not dealing with an instance of the Toggl client.
+    if (!$input->getOption('workspace') && $config->getValueFromConfig('workspace')) {
+      $input->setOption('workspace', $config->getValueFromConfig('workspace'));
     }
   }
 

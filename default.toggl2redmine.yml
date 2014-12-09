@@ -12,3 +12,7 @@
  redmineURL: "https://some.redmine.server"
  redmineAPIKey: "someapikeyforredmine"
  togglAPIKey: "someapikeyfortoggl"
+ fromDate: "-1 day"
+ toDate: "now"
+ defaultActivity: "Development"
+ workspace: "123456"
