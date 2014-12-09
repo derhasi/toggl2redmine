@@ -363,7 +363,7 @@ class TimeEntrySync extends Command {
       $workspaces = $this->togglClient->getWorkspaces();
       $options = array();
       foreach ($workspaces as $i => $workspace) {
-        $options[$i] = $workspace['name'];
+        $options[$i] = sprintf('%s [ID:%d]', $workspace['name'], $workspace['id']);
       }
 
       $workspace_name = $this->question->ask($this->input, $this->output, new ChoiceQuestion('Select your workspace:', $options));
