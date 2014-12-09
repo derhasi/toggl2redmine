@@ -61,4 +61,11 @@ can place it at `~/.toggl2redmine/toggl2redmine.yml`. Attention: local and globa
 local default always take precedence over the global defaults, in the case it exists.
 
 You can find a template for `toggl2redmine.yml` at [default.toggl2redmine.yml](default.toggl2redmine.yml). Make sure
-rename it to `toggl2redmine.yml`!
+to rename it to `toggl2redmine.yml`!
+
+For example, for adding the default config template to the global folder you can simply type:
+
+```sh
+mkdir ~/.toggl2redmine
+curl https://raw.githubusercontent.com/derhasi/toggl2redmine/master/default.toggl2redmine.yml > ~/.toggl2redmine/toggl2redmine.yml
+```
