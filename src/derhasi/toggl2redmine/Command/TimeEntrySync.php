@@ -531,7 +531,7 @@ class TimeEntrySync extends Command {
     }
 
     // Update toggl entry with #synced Flag.
-    $this->saveSynchedTogglTimeEntry($entry);
+    $this->saveSynchedTogglTimeEntry($entry, $activity);
   }
 
   /**
@@ -647,10 +647,18 @@ class TimeEntrySync extends Command {
    * Helper to save a time entry as synched.
    *
    * @param $entry
+   * @param \derhasi\toggl2redmine\RedmineTimeEntryActivity $activity
    */
-  protected function saveSynchedTogglTimeEntry(&$entry) {
+  protected function saveSynchedTogglTimeEntry(&$entry, $activity = NULL) {
     // We tag the toggle time entry with the synced flag.
     $entry['tags'][] = self::ISSUE_SYNCED_FLAG;
+
+    // Make sure our activity will be saved as tag, in case the acitivity is
+    // provided as default activity.
+    if (isset($activity) && array_search($activity->name, $entry['tags']) === FALSE) {
+      $entry['tags'][] = $activity->name;
+    }
+
     $entry['created_with'] = 'toggl2redmine';
     $ret = $this->togglClient->updateTimeEntry(array(
       'id' => $entry['id'],
