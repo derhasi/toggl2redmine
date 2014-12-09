@@ -63,7 +63,9 @@ class TimeEntrySyncConfigWrapper {
     // In the case we do not find the config file, we want to silently fail, as
     // we will have a fallback.
     try {
-      $location = $locator->locate(static::FILENAME, null, true);
+      // We look in the global folder. But before that we have a look in the
+      // current working directory.
+      $location = $locator->locate(static::FILENAME, getcwd(), true);
     }
     catch (\Exception $e) {
       // No file found, means no configuration.
