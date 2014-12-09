@@ -29,9 +29,14 @@ You can run `composer require derhasi/toggl2redmine` in any composer enabled pro
 
 ## Usage
 
+You can run the global or local command by appending options, use a configuration file or use both. A command line
+argument or option will allways override a setting from the `toggl2redmine.yml`.
+
 Global: `toggl2redmine.php time-entry-sync ...`
 
 Local: `./toggl2redmine time-entry-sync ...`
+
+### Command line arguments and options
 
 ```
 Usage:
@@ -47,4 +52,13 @@ Options:
  --fromDate            From Date to get Time Entries from (default: "-1 day")
  --toDate              To Date to get Time Entries from (default: "now")
  --defaultActivity     Name of the default redmine activity to use for empty time entry tags (default: "")
- ```
+```
+ 
+### Configuration
+ 
+You can place a `toggl2redmine.yml` in your current working directory for local defaults. For global defaults you
+can place it at `~/.toggl2redmine/toggl2redmine.yml`. Attention: local and global defaults will **not** be merged. The
+local default always take precedence over the global defaults, in the case it exists.
+
+You can find a template for `toggl2redmine.yml` at [default.toggl2redmine.yml](default.toggl2redmine.yml). Make sure
+rename it to `toggl2redmine.yml`!
