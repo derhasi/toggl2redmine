@@ -2,6 +2,8 @@
 
 PHP CLI tool for syncing toggl with redmine.
 
+[![Latest Stable Version](https://poser.pugx.org/derhasi/toggl2redmine/v/stable.svg)](https://packagist.org/packages/derhasi/toggl2redmine) [![Total Downloads](https://poser.pugx.org/derhasi/toggl2redmine/downloads.svg)](https://packagist.org/packages/derhasi/toggl2redmine) [![Latest Unstable Version](https://poser.pugx.org/derhasi/toggl2redmine/v/unstable.svg)](https://packagist.org/packages/derhasi/toggl2redmine) [![License](https://poser.pugx.org/derhasi/toggl2redmine/license.svg)](https://packagist.org/packages/derhasi/toggl2redmine)
+
 ## Time entry sync
 
 Currently only `time-entry-sync` is available.
