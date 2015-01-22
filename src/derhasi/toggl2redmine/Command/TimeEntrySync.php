@@ -385,7 +385,7 @@ class TimeEntrySync extends Command {
     $process = array();
 
     $table = new Table($this->output);
-    $table->setHeaders(array('Issue', 'Description', 'Duration', 'Activity', 'Status'));
+    $table->setHeaders(array('Issue', 'Issue title', 'Description', 'Duration', 'Activity', 'Status'));
 
     $defaultActivity = $this->getDefaultRedmineActivity();
 
@@ -400,6 +400,7 @@ class TimeEntrySync extends Command {
         if ($this->isTimeEntrySynced($entry)) {
           $table->addRow(array(
             $issue_id,
+            $this->getRedmineIssueTitle($issue_id),
             $entry['description'],
             number_format($entry['duration'] / 60 / 60, 2),
             ($activity_type) ? $activity_type->name : '',
@@ -410,6 +411,7 @@ class TimeEntrySync extends Command {
         elseif ($activity_type || $defaultActivity) {
           $table->addRow(array(
             $issue_id,
+            $this->getRedmineIssueTitle($issue_id),
             $entry['description'],
             number_format($entry['duration'] / 60 / 60, 2),
             ($activity_type) ? $activity_type->name : sprintf('[ %s ]', $defaultActivity->name),
@@ -426,6 +428,7 @@ class TimeEntrySync extends Command {
         else {
           $table->addRow(array(
             $issue_id,
+            $this->getRedmineIssueTitle($issue_id),
             $entry['description'],
             number_format($entry['duration'] / 60 / 60, 2),
             '',
@@ -436,6 +439,7 @@ class TimeEntrySync extends Command {
       else {
         $table->addRow(array(
           ' - ',
+          '',
           $entry['description'],
           number_format($entry['duration'] / 60 / 60, 2),
           $activity_type->name,
@@ -481,6 +485,23 @@ class TimeEntrySync extends Command {
       return $match[self::ISSUE_PATTERN_MATCH_ID];
     }
     return NULL;
+  }
+
+  /**
+   * Retrieve the issue subject for an issue ID.
+   *
+   * @param integer $issue_id
+   * @return string
+   */
+  function getRedmineIssueTitle($issue_id) {
+    static $titles = array();
+
+    if (!isset($titles[$issue_id])) {
+      $issue = $this->redmineClient->api('issue')->show($issue_id)['issue'];
+      $titles[$issue_id] = $issue['subject'];
+    }
+
+    return $titles[$issue_id];
   }
 
   /**
