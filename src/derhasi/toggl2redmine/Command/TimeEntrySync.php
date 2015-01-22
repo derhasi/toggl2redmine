@@ -78,6 +78,13 @@ class TimeEntrySync extends Command {
   protected $config;
 
   /**
+   * Collects information for issues to avoid multiple calls.
+   *
+   * @var array
+   */
+  protected $tempIssues = array();
+
+  /**
    * {@inheritdoc}
    */
   protected function configure()
@@ -396,15 +403,27 @@ class TimeEntrySync extends Command {
 
       // Get issue number from description.
       if ($issue_id = $this->getIssueNumberFromTimeEntry($entry)) {
+
         // Check if the entry is already synced.
         if ($this->isTimeEntrySynced($entry)) {
           $table->addRow(array(
             $issue_id,
-            $this->getRedmineIssueTitle($issue_id),
+            $this->getRedmineIssueTitle($issue_id, '<warning>Issue is not available anymore.</warning>'),
             $entry['description'],
             number_format($entry['duration'] / 60 / 60, 2),
             ($activity_type) ? $activity_type->name : '',
             '<info>SYNCED</info>'
+          ));
+        }
+        // Check if there is a valid issue for the issue ID.
+        elseif (!$this->isIssueNumberValid($issue_id)) {
+          $table->addRow(array(
+            $issue_id,
+            '',
+            $entry['description'],
+            number_format($entry['duration'] / 60 / 60, 2),
+            ($activity_type) ? $activity_type->name : '',
+            '<error>Given issue not available.</error>'
           ));
         }
         // We only process the item, if we got a valid activity.
@@ -488,20 +507,53 @@ class TimeEntrySync extends Command {
   }
 
   /**
+   * Check if we got a valid issue ID.
+   *
+   * @param integer $issue_id
+   *
+   * @return bool
+   */
+  function isIssueNumberValid($issue_id) {
+    $issue = $this->getRedmineIssue($issue_id);
+    return !empty($issue);
+  }
+
+  /**
    * Retrieve the issue subject for an issue ID.
    *
    * @param integer $issue_id
+   *   The redmine issue ID.
+   * @param string $fallback
+   *   Fallback string to show if issue does not exists.
+   *
    * @return string
    */
-  function getRedmineIssueTitle($issue_id) {
-    static $titles = array();
-
-    if (!isset($titles[$issue_id])) {
-      $issue = $this->redmineClient->api('issue')->show($issue_id)['issue'];
-      $titles[$issue_id] = $issue['subject'];
+  function getRedmineIssueTitle($issue_id, $fallback = '') {
+    if ($issue = $this->getRedmineIssue($issue_id)) {
+      return $issue['subject'];
     }
+    else {
+      return $fallback;
+    }
+  }
 
-    return $titles[$issue_id];
+  /**
+   * Retieve issue information from redmine.
+   *
+   * @param integer $issue_id
+   * @return mixed
+   */
+  function getRedmineIssue($issue_id) {
+    if (!isset($this->tempIssues[$issue_id])) {
+      $ret = $this->redmineClient->api('issue')->show($issue_id);
+      if (isset($ret['issue'])) {
+        $this->tempIssues[$issue_id] = $ret['issue'];
+      }
+      else {
+        $this->tempIssues[$issue_id] = null;
+      }
+    }
+    return $this->tempIssues[$issue_id];
   }
 
   /**
