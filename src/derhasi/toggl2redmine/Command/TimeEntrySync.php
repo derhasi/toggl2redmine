@@ -629,7 +629,8 @@ class TimeEntrySync extends Command {
         unset($entries[$id]);
       }
       // Time entries that are not finished yet, get removed too.
-      elseif (empty($entry['stop'])) {
+      // As time entries may run in duronly mode, we only can indicate a non-stopped entry by a negative duration.
+      elseif ($entry['duration'] <= 0) {
         unset($entries[$id]);
       }
       // Skip entry if it is not part of the workspace.
