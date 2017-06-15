@@ -591,11 +591,21 @@ class TimeEntrySync extends Command {
       );
       // If there is already a redmine entry, we need to update that one.
       if ($redmine_id = $entry->getRedmineEntryID()) {
-        $redmine_time_entry = $this->redmineClient->time_entry->update($redmine_id, $data);
+        $error_message = $this->redmineClient->time_entry->update($redmine_id, $data);
+        if (!empty($error_message)) {
+          $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getID(), $entry->getDescription(), $entry->getIssueID(), $error_message));
+          return;
+        }
       }
-      // Otherwise we update
+      // Otherwise we update.
       else {
         $redmine_time_entry = $this->redmineClient->time_entry->create($data);
+
+        // Check if we got a valid new time entry back.
+        if (!$redmine_time_entry->id) {
+          $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getID(), $entry->getDescription(), $entry->getIssueID(), $redmine_time_entry->error));
+          return;
+        }
       }
     }
     catch (\Exception $e) {
@@ -603,11 +613,7 @@ class TimeEntrySync extends Command {
       return;
     }
 
-    // Check if we got a valid time entry back.
-    if (!$redmine_time_entry->id) {
-      $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getID(), $entry->getDescription(), $entry->getIssueID(), $redmine_time_entry->error));
-      return;
-    }
+
 
     // Update toggl entry with #synced Flag.
     $this->saveSynchedTogglTimeEntry($entry, $activity);
