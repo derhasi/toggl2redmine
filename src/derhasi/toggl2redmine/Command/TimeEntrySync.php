@@ -464,6 +464,19 @@ class TimeEntrySync extends Command {
       }
     }
 
+    // Process rest of the redmine entries.
+    $redmineEntries = $collection->getUnassociatedRedmineEntries();
+    foreach ($redmineEntries as $redmineEntry) {
+      $table->addRow(array(
+        $redmineEntry->getIssueID(),
+        $this->getRedmineIssueTitle($redmineEntry->getIssueID()),
+        $redmineEntry->getDescription(),
+        $redmineEntry->getHours(),
+        $redmineEntry->getActivity()->name,
+        '<error>NOT IN TOGGL</error>'
+      ));
+    }
+
     $table->render();
 
     // Simply proceed if no items are to be processed.

@@ -17,6 +17,7 @@ class TimeEntryCollection implements \Countable {
   protected $entries = [];
 
   /**
+   * Stores sync association of time entry ids: key:toggl, value: redmine.
    * @var array
    */
   protected $sync = [];
@@ -99,6 +100,21 @@ class TimeEntryCollection implements \Countable {
         $this->associateEntryIDs($comb['toggl'], $comb['redmine']);
       }
     }
+  }
+
+  /**
+   * Provides list of redmine entries that have no associated toggl entry.
+   *
+   * @return \derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry[]
+   */
+  public function getUnassociatedRedmineEntries() {
+    $return = [];
+    foreach ($this->redmineEntries as $redmineEntry) {
+      if (!$this->redmineHasSync($redmineEntry->getID())) {
+        $return[] = $redmineEntry;
+      }
+    }
+    return $return;
   }
 
   /**
