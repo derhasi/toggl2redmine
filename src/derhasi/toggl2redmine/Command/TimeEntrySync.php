@@ -428,7 +428,6 @@ class TimeEntrySync extends Command {
             $entry->getHours(),
             ($activity_type) ? $activity_type->name : sprintf('[ %s ]', $defaultActivity->name),
             empty($entry->getRedmineEntryID()) ? '<comment>unsynced</comment>' : '<comment>changed</comment>',
-            $entry->syncScore(),
           ));
 
           // Set item to be process.
@@ -736,26 +735,25 @@ class TimeEntrySync extends Command {
   /**
    * Helper to save a time entry as synched.
    *
-   * @param $entry
+   * @param TimeEntry $entry
    * @param \derhasi\toggl2redmine\RedmineTimeEntryActivity $activity
    */
-  protected function saveSynchedTogglTimeEntry(&$entry, $activity = NULL) {
+  protected function saveSynchedTogglTimeEntry(TimeEntry $entry, $activity = NULL) {
+    $raw = $entry->getRaw();
+
     // We tag the toggle time entry with the synced flag.
-    $entry['tags'][] = self::ISSUE_SYNCED_FLAG;
+    $raw['tags'] = [
+      $activity->name,
+      self::ISSUE_SYNCED_FLAG
+    ];
 
-    // Make sure our activity will be saved as tag, in case the acitivity is
-    // provided as default activity.
-    if (isset($activity) && array_search($activity->name, $entry['tags']) === FALSE) {
-      $entry['tags'][] = $activity->name;
-    }
-
-    $entry['created_with'] = 'toggl2redmine';
+    $raw['created_with'] = 'toggl2redmine';
     $ret = $this->togglClient->updateTimeEntry(array(
-      'id' => $entry['id'],
-      'time_entry' => $entry,
+      'id' => $raw['id'],
+      'time_entry' => $raw,
     ));
     if (empty($ret)) {
-      $this->output->writeln(sprintf('<error>Updating toggl entry %d failed: %s', $entry['id'], $entry['description']));
+      $this->output->writeln(sprintf('<error>Updating toggl entry %d failed: %s', $raw['id'], $raw['description']));
     }
   }
 

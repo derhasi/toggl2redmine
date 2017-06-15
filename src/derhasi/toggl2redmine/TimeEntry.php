@@ -57,6 +57,10 @@ class TimeEntry {
     $this->extractIssueNumber();
   }
 
+  public function getRaw() {
+    return $this->entry;
+  }
+
   public function getID() {
     return $this->entry['id'];
   }
