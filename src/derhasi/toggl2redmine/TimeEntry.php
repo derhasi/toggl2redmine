@@ -160,4 +160,30 @@ class TimeEntry {
     return $this->calculateSyncScore($this->redmineData);
   }
 
+  /**
+   * Provides a string listing all old values that are about to be changed.
+   *
+   * @return string
+   */
+  public function getChangedString() {
+    $text = [];
+
+    // Description
+    if ($this->redmineData['comments'] != $this->entry['description']) {
+      $text[] = sprintf('Description: "%s"', $this->redmineData['comments']);
+    }
+
+    // Time Value
+    if ($this->redmineData['hours'] != $this->getHours()) {
+      $text[] = sprintf('Duration:  %s', $this->redmineData['hours']);
+    }
+
+    // Category
+    if (!$this->hasTag($this->redmineData['activity']['name'])) {
+      $text[] = sprintf('Activity:  %s', $this->redmineData['activity']['name']);
+    }
+
+    return implode("\n", $text);
+  }
+
 }

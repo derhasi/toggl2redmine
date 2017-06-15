@@ -427,7 +427,7 @@ class TimeEntrySync extends Command {
             $entry->getDescription(),
             $entry->getHours(),
             ($activity_type) ? $activity_type->name : sprintf('[ %s ]', $defaultActivity->name),
-            empty($entry->getRedmineEntryID()) ? '<comment>unsynced</comment>' : '<comment>changed</comment>',
+            empty($entry->getRedmineEntryID()) ? '<comment>unsynced</comment>' : "<comment>changed</comment>\n" . $entry->getChangedString(),
           ));
 
           // Set item to be process.
