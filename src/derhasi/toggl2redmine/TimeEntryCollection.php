@@ -7,6 +7,8 @@
 namespace derhasi\toggl2redmine;
 
 
+use derhasi\toggl2redmine\TimeEntry\TogglTimeEntry;
+
 class TimeEntryCollection implements \Countable {
 
   /**
@@ -20,7 +22,7 @@ class TimeEntryCollection implements \Countable {
   protected $sync = [];
 
   /**
-   * @var array
+   * @var \derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry[]
    */
   protected $redmineEntries = [];
 
@@ -34,11 +36,14 @@ class TimeEntryCollection implements \Countable {
   }
 
   /**
-   * @param array $togglEntry
+   *
+   * @param \derhasi\toggl2redmine\TimeEntry\TogglTimeEntry $togglEntry
    */
-  public function addTogglEntry($togglEntry) {
-    $entry = new TimeEntry($togglEntry);
-    $this->entries[$entry->getID()] = $entry;
+  public function addTogglEntry(TogglTimeEntry $togglEntry) {
+    $entry = new TimeEntry();
+    $entry->setTogglEntry($togglEntry);
+    // Keyed by the toggl entry id.
+    $this->entries[$entry->getTogglEntry()->getID()] = $entry;
   }
 
   /**
@@ -58,19 +63,20 @@ class TimeEntryCollection implements \Countable {
 
   /**
    * Provide redmine entries to associate with the given list of toggl entries.
-   * @param $redmineEntries
+   * @param \derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry[] $redmineEntries
    */
-  public function processRedmineEntries($redmineEntries) {
+  public function processRedmineEntries(array $redmineEntries) {
     $this->redmineEntries = [];
     $combinations = [];
 
+    /** @var \derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry $redmineEntry */
     foreach ($redmineEntries as $redmineEntry) {
-      $this->redmineEntries[$redmineEntry['id']] = $redmineEntry;
+      $this->redmineEntries[$redmineEntry->getID()] = $redmineEntry;
 
       foreach ($this->entries as $entry) {
         $combinations[] = [
-          'redmine' => $redmineEntry['id'],
-          'toggl' => $entry->getID(),
+          'redmine' => $redmineEntry->getID(),
+          'toggl' => $entry->getTogglEntry()->getID(),
           'score' => $entry->calculateSyncScore($redmineEntry),
         ];
       }
@@ -125,7 +131,7 @@ class TimeEntryCollection implements \Countable {
    */
   protected function associateEntryIDs($toggleID, $redmineID) {
     $this->sync[$toggleID] = $redmineID;
-    $this->entries[$toggleID]->setRedmineEntry($redmineID, $this->redmineEntries[$redmineID]);
+    $this->entries[$toggleID]->setRedmineEntry($this->redmineEntries[$redmineID]);
   }
 
 

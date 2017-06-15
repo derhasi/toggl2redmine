@@ -2,17 +2,10 @@
 
 namespace derhasi\toggl2redmine;
 
+use derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry;
+use derhasi\toggl2redmine\TimeEntry\TogglTimeEntry;
+
 class TimeEntry {
-
-  /**
-   *  Issue pattern to get the issue number from (in the first match).
-   */
-  const ISSUE_PATTERN = '/#([0-9]*)/m';
-
-  /**
-   * Number of the match item to get the issue number from.
-   */
-  const ISSUE_PATTERN_MATCH_ID = 1;
 
   /**
    * The score for which we can assume all changes to be present in the sync.
@@ -27,9 +20,9 @@ class TimeEntry {
   const MIN_SCORE = 1000;
 
   /**
-   * @var array
+   * @var \derhasi\toggl2redmine\TimeEntry\TogglTimeEntry
    */
-  protected $entry;
+  protected $togglEntry;
 
   /**
    * @var integer
@@ -37,56 +30,68 @@ class TimeEntry {
   protected $issueID;
 
   /**
-   * @var int
+   * @var \derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry
    */
-  protected $redmineID;
+  protected $redmineEntry;
 
   /**
-   * @var array
+   * @var \derhasi\toggl2redmine\RedmineTimeEntryActivity
    */
-  protected $redmineData;
+  protected $activity;
+
 
   /**
-   * TimeEntry constructor.
+   * Get the associated toggl entry.
    *
-   * @param array $togglEntry
+   * @return \derhasi\toggl2redmine\TimeEntry\TogglTimeEntry
    */
-  public function __construct($togglEntry) {
-    $this->entry = $togglEntry;
-
-    $this->extractIssueNumber();
-  }
-
-  public function getRaw() {
-    return $this->entry;
-  }
-
-  public function getID() {
-    return $this->entry['id'];
-  }
-
-  public function getDescription() {
-    return $this->entry['description'];
-  }
-
-  public function getIssueID() {
-    return $this->issueID;
-  }
-
-  public function getSpentOn() {
-    $date = new \DateTime($this->entry['start']);
-    return $date->format('Y-m-d');
+  public function getTogglEntry() {
+    return $this->togglEntry;
   }
 
   /**
-   * Provide the redmine issue number associated to this time entry.
+   * Set the toggl entry.
+   *
+   * @param \derhasi\toggl2redmine\TimeEntry\TogglTimeEntry $togglEntry
    */
-  protected function extractIssueNumber() {
-    $match = array();
-    if (isset($this->entry['description']) && preg_match(self::ISSUE_PATTERN, $this->entry['description'], $match)) {
-      $this->issueID = (int) $match[self::ISSUE_PATTERN_MATCH_ID];
-      return $this->issueID;
-    }
+  public function setTogglEntry($togglEntry) {
+    $this->togglEntry = $togglEntry;
+  }
+
+  /**
+   * Checks if toggl entry is set.
+   *
+   * @return bool
+   */
+  public function hasTogglEntry() {
+    return isset($this->togglEntry);
+  }
+  
+  /**
+   * Get the redmine entry.
+   *
+   * @return \derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry
+   */
+  public function getRedmineEntry() {
+    return $this->redmineEntry;
+  }
+
+  /**
+   * Set the redmine entry.
+   *
+   * @param \derhasi\toggl2redmine\TimeEntry\RedmineTimeEntry $redmineEntry
+   */
+  public function setRedmineEntry($redmineEntry) {
+    $this->redmineEntry = $redmineEntry;
+  }
+
+  /**
+   * Checks if a redmine entry isset.
+   *
+   * @return bool
+   */
+  public function hasRedmineEntry() {
+    return isset($this->redmineEntry);
   }
 
   /**
@@ -96,26 +101,26 @@ class TimeEntry {
    *
    * @return int
    */
-  public function calculateSyncScore($redmineEntry) {
+  public function calculateSyncScore(RedmineTimeEntry $redmineEntry) {
     $score = 0;
 
     // Issue ID
-    if ($redmineEntry['issue']['id'] == $this->getIssueID()) {
+    if ($redmineEntry->getIssueID() == $this->togglEntry->getIssueID()) {
       $score += 1000;
     }
 
     // Description
-    if ($redmineEntry['comments'] == $this->entry['description']) {
+    if ($redmineEntry->getDescription() == $this->togglEntry->getDescription()) {
       $score += 100;
     }
 
     // Time Value
-    if ($redmineEntry['hours'] == $this->getHours()) {
+    if ($redmineEntry->getHours() == $this->togglEntry->getHours()) {
       $score += 10;
     }
 
     // Category
-    if ($this->hasTag($redmineEntry['activity']['name'])) {
+    if (in_array($redmineEntry->getActivity()->name, $this->togglEntry->getTags())) {
       $score += 1;
     }
 
@@ -123,41 +128,26 @@ class TimeEntry {
   }
 
   /**
-   * Provides the redmine sync id of the time entry.
+   * Provide the sync score for the given association.
+   *
    * @return int
    */
-  public function getRedmineEntryID() {
-    return $this->redmineID;
+  public function syncScore() {
+    if (!$this->hasRedmineEntry()) {
+      return 0;
+    }
+
+    return $this->calculateSyncScore($this->redmineEntry);
   }
+
 
   /**
-   * Set sync
-   * @param $id
-   * @param $redmineData
+   * Checks if the sync entries have changes, based on the sync score.
+   *
+   * @return bool
    */
-  public function setRedmineEntry($id, $redmineData) {
-    $this->redmineID = $id;
-    $this->redmineData = $redmineData;
-  }
-
-  public function hasTag($name) {
-    return array_search($name, $this->entry['tags']) !== FALSE;
-  }
-
-  public function getTagNames() {
-    return $this->entry['tags'];
-  }
-
-  public function getHours() {
-    return number_format($this->entry['duration'] / 60 / 60, 2);
-  }
-
-  public function syncNeeded() {
-    return $this->calculateSyncScore($this->redmineData) != static::UNCHANGED_SCORE;
-  }
-
-  public function syncScore() {
-    return $this->calculateSyncScore($this->redmineData);
+  public function hasChanges() {
+    return $this->syncScore() < static::UNCHANGED_SCORE;
   }
 
   /**
@@ -169,21 +159,47 @@ class TimeEntry {
     $text = [];
 
     // Description
-    if ($this->redmineData['comments'] != $this->entry['description']) {
-      $text[] = sprintf('Description: "%s"', $this->redmineData['comments']);
+    if ($this->redmineEntry->getDescription() != $this->togglEntry->getDescription()) {
+      $text[] = sprintf('- Description: "%s"', $this->redmineEntry->getDescription());
     }
 
-    // Time Value
-    if ($this->redmineData['hours'] != $this->getHours()) {
-      $text[] = sprintf('Duration:  %s', $this->redmineData['hours']);
+    // Description
+    if ($this->redmineEntry->getHours() != $this->togglEntry->getHours()) {
+      $text[] = sprintf('- Duration: "%s"', $this->redmineEntry->getHours());
     }
 
     // Category
-    if (!$this->hasTag($this->redmineData['activity']['name'])) {
-      $text[] = sprintf('Activity:  %s', $this->redmineData['activity']['name']);
+    if (!in_array($this->redmineEntry->getActivity()->name, $this->togglEntry->getTags())) {
+      $text[] = sprintf('- Activity:  %s', $this->redmineEntry->getActivity()->name);
     }
 
     return implode("\n", $text);
+  }
+
+  /**
+   * Get set activity.
+   * 
+   * @return \derhasi\toggl2redmine\RedmineTimeEntryActivity
+   */
+  public function getActivity() {
+    return $this->activity;
+  }
+
+  /**
+   * Set activity.
+   *
+   * @param \derhasi\toggl2redmine\RedmineTimeEntryActivity $activity
+   */
+  public function setActivity(RedmineTimeEntryActivity $activity) {
+    $this->activity = $activity;
+  }
+
+  /**
+   * Checks if we have an activity set.
+   * @return bool
+   */
+  public function hasActivity() {
+    return isset($this->activity);
   }
 
 }

@@ -16,11 +16,10 @@ class RedmineTimeEntryActivity {
   /**
    * Constructor.
    *
-   * @param integer $id
-   * @param string $name
+   * @param array $raw
    */
-  public function __construct($id, $name) {
-    $this->id = $id;
-    $this->name = $name;
+  public function __construct($raw) {
+    $this->id = $raw['id'];
+    $this->name = $raw['name'];
   }
 }

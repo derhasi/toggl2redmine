@@ -392,19 +392,22 @@ class TimeEntrySync extends Command {
     // Get the items to process.
     foreach ($collection->getEntries() as $entry) {
 
-      $activity_type = $this->getRedmineActivityFromTogglEntry($entry);
+      $activity = $this->getRedmineActivityFromTogglEntry($entry->getTogglEntry());
+      if ($activity) {
+        $entry->setActivity($activity);
+      }
 
       // Get issue number from description.
-      if ($issue_id = $entry->getIssueID()) {
+      if ($issue_id = $entry->getTogglEntry()->getIssueID()) {
 
         // Check if the entry is already fully synced.
-        if (!$entry->syncNeeded()) {
+        if (!$entry->hasChanges()) {
           $table->addRow(array(
             $issue_id,
             $this->getRedmineIssueTitle($issue_id, '<warning>Issue is not available anymore.</warning>'),
-            $entry->getDescription(),
-            $entry->getHours(),
-            ($activity_type) ? $activity_type->name : '',
+            $entry->getTogglEntry()->getDescription(),
+            $entry->getTogglEntry()->getHours(),
+            ($entry->hasActivity()) ? $entry->getActivity()->name : '',
             '<info>SYNCED</info>'
           ));
         }
@@ -413,47 +416,49 @@ class TimeEntrySync extends Command {
           $table->addRow(array(
             $issue_id,
             '',
-            $entry->getDescription(),
-            $entry->getHours(),
-            ($activity_type) ? $activity_type->name : '',
+            $entry->getTogglEntry()->getDescription(),
+            $entry->getTogglEntry()->getHours(),
+            ($entry->hasActivity()) ? $entry->getActivity()->name : '',
             '<error>Given issue not available.</error>'
           ));
         }
         // We only process the item, if we got a valid activity.
-        elseif ($activity_type || $defaultActivity) {
+        elseif ($entry->hasActivity() || $defaultActivity) {
           $table->addRow(array(
             $issue_id,
             $this->getRedmineIssueTitle($issue_id),
-            $entry->getDescription(),
-            $entry->getHours(),
-            ($activity_type) ? $activity_type->name : sprintf('[ %s ]', $defaultActivity->name),
-            empty($entry->getRedmineEntryID()) ? '<comment>unsynced</comment>' : "<comment>changed</comment>\n" . $entry->getChangedString(),
+            $entry->getTogglEntry()->getDescription(),
+            $entry->getTogglEntry()->getHours(),
+            ($entry->hasActivity()) ? $entry->getActivity()->name : sprintf('[ %s ]', $defaultActivity->name),
+            (!$entry->hasRedmineEntry()) ? '<comment>unsynced</comment>' : "<comment>changed</comment>:\n" . $entry->getChangedString(),
           ));
 
           // Set item to be process.
-          $process[] = array(
-            'entry' => $entry,
-            'activity' => ($activity_type) ? $activity_type : $defaultActivity,
-          );
+          if (!$entry->hasActivity()) {
+            $entry->setActivity($defaultActivity);
+          }
+
+          $process[] = $entry;
         }
         else {
           $table->addRow(array(
             $issue_id,
             $this->getRedmineIssueTitle($issue_id),
-            $entry->getDescription(),
-            $entry->getHours(),
+            $entry->getTogglEntry()->getDescription(),
+            $entry->getTogglEntry()->getHours(),
             '',
             '<error>no activity</error>'
           ));
         }
       }
+      // No issue id given.
       else {
         $table->addRow(array(
           ' - ',
           '',
-          $entry->getDescription(),
-          $entry->getHours(),
-          $activity_type->name,
+          $entry->getTogglEntry()->getDescription(),
+          $entry->getTogglEntry()->getHours(),
+          ($entry->hasActivity()) ? $entry->getActivity()->name : '',
           '<error>No Issue ID found</error>'
         ));
       }
@@ -477,8 +482,8 @@ class TimeEntrySync extends Command {
 
     // Process each item.
     $this->progress->start($this->output, count($process));
-    foreach ($process as $processData) {
-      $this->syncTimeEntry($processData['entry'], $processData['activity']);
+    foreach ($process as $entry) {
+      $this->syncTimeEntry($entry);
       $this->progress->advance();
     }
     $this->progress->finish();
@@ -573,26 +578,25 @@ class TimeEntrySync extends Command {
   /**
    * Helper to sync a single time entry to redmine.
    *
-   * @param $entry
-   * @param \derhasi\toggl2redmine\RedmineTimeEntryActivity $activity
+   * @param \derhasi\toggl2redmine\TimeEntry $entry
    */
-  function syncTimeEntry(TimeEntry $entry, RedmineTimeEntryActivity $activity) {
+  function syncTimeEntry(TimeEntry $entry) {
     // Write to redmine.
     // Fetch unknown errors, or errors that cannot be quickly changed, like
     // - project was archived
     try {
       $data = array(
-        'issue_id' => $entry->getIssueID(),
-        'spent_on' => $entry->getSpentOn(),
-        'hours' => $entry->getHours(),
-        'activity_id' => $activity->id,
-        'comments' => $entry->getDescription(),
+        'issue_id' => $entry->getTogglEntry()->getIssueID(),
+        'spent_on' => $entry->getTogglEntry()->getDateString(),
+        'hours' => $entry->getTogglEntry()->getHours(),
+        'activity_id' => $entry->getActivity()->id,
+        'comments' => $entry->getTogglEntry()->getDescription(),
       );
       // If there is already a redmine entry, we need to update that one.
-      if ($redmine_id = $entry->getRedmineEntryID()) {
-        $error_message = $this->redmineClient->time_entry->update($redmine_id, $data);
+      if ($entry->hasRedmineEntry()) {
+        $error_message = $this->redmineClient->time_entry->update($entry->getRedmineEntry()->getID(), $data);
         if (!empty($error_message)) {
-          $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getID(), $entry->getDescription(), $entry->getIssueID(), $error_message));
+          $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getTogglEntry()->getID(), $data['comments'], $data['issue_id'], $error_message));
           return;
         }
       }
@@ -602,20 +606,18 @@ class TimeEntrySync extends Command {
 
         // Check if we got a valid new time entry back.
         if (!$redmine_time_entry->id) {
-          $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getID(), $entry->getDescription(), $entry->getIssueID(), $redmine_time_entry->error));
+          $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getTogglEntry()->getID(), $data['comments'], $data['issue_id'], $redmine_time_entry->error));
           return;
         }
       }
     }
     catch (\Exception $e) {
-      $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getID(), $entry->getDescription(), $entry->getIssueID(), $e->getMessage()));
+      $this->output->writeln(sprintf("<error>SYNC Failed for %d: %s\t (Issue #%d)\t%s</error>", $entry->getTogglEntry()->getID(), $data['comments'], $data['issue_id'], $e->getMessage()));
       return;
     }
 
-
-
     // Update toggl entry with #synced Flag.
-    $this->saveSynchedTogglTimeEntry($entry, $activity);
+    $this->saveSynchedTogglTimeEntry($entry);
   }
 
   /**
@@ -650,7 +652,7 @@ class TimeEntrySync extends Command {
         continue;
       }
       else {
-        $collection->addTogglEntry($entry);
+        $collection->addTogglEntry(new TimeEntry\TogglTimeEntry($entry));
       }
     }
 
@@ -660,11 +662,12 @@ class TimeEntrySync extends Command {
   /**
    * Helper to get a redmine activity from entry's tags.
    *
-   * @param array $entry
+   * @param array $togglTimeEntry
+   *
    * @return \derhasi\toggl2redmine\RedmineTimeEntryActivity
    */
-  protected function getRedmineActivityFromTogglEntry(TimeEntry $entry) {
-    foreach ($entry->getTagNames() as $tagName) {
+  protected function getRedmineActivityFromTogglEntry(TimeEntry\TogglTimeEntry $togglTimeEntry) {
+    foreach ($togglTimeEntry->getTags() as $tagName) {
       $activity = $this->getRedmineActivityByName($tagName);
 
       if ($activity) {
@@ -685,7 +688,7 @@ class TimeEntrySync extends Command {
     if (!isset($redmineActivities)) {
       $act = $this->redmineClient->api('time_entry_activity')->all()['time_entry_activities'];
       foreach ($act as $activity) {
-        $redmineActivities[$activity['name']] = new RedmineTimeEntryActivity($activity['id'], $activity['name']);
+        $redmineActivities[$activity['name']] = new RedmineTimeEntryActivity($activity);
       }
     }
 
@@ -738,12 +741,12 @@ class TimeEntrySync extends Command {
    * @param TimeEntry $entry
    * @param \derhasi\toggl2redmine\RedmineTimeEntryActivity $activity
    */
-  protected function saveSynchedTogglTimeEntry(TimeEntry $entry, $activity = NULL) {
-    $raw = $entry->getRaw();
+  protected function saveSynchedTogglTimeEntry(TimeEntry $entry) {
+    $raw = $entry->getTogglEntry()->raw;
 
     // We tag the toggle time entry with the synced flag.
     $raw['tags'] = [
-      $activity->name,
+      $entry->getActivity()->name,
       self::ISSUE_SYNCED_FLAG
     ];
 
@@ -796,7 +799,12 @@ class TimeEntrySync extends Command {
       'spent_on' => $from->format('Y-m-d'),
     ]);
 
-    return $response['time_entries'];
+    $return = [];
+    foreach ($response['time_entries'] as $entry) {
+      $return[] = new TimeEntry\RedmineTimeEntry($entry);
+    }
+
+    return $return;
   }
 
 }
