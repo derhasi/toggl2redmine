@@ -17,7 +17,7 @@ class TimeEntry {
    *
    * This means at least the issue id has to match.
    */
-  const MIN_SCORE = 1000;
+  const MIN_SCORE = 10;
 
   /**
    * @var \derhasi\toggl2redmine\TimeEntry\TogglTimeEntry
@@ -157,6 +157,11 @@ class TimeEntry {
    */
   public function getChangedString() {
     $text = [];
+
+    // Issue ID
+    if ($this->redmineEntry->getIssueID() != $this->togglEntry->getIssueID()) {
+      $text[] = sprintf('- Issue: "%s"', $this->redmineEntry->getIssueID());
+    }
 
     // Description
     if ($this->redmineEntry->getDescription() != $this->togglEntry->getDescription()) {
