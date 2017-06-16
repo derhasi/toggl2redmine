@@ -319,6 +319,11 @@ class TimeEntrySync extends Command {
     $interval_second = new \DateInterval('PT1S');
 
     $day_from = clone $global_from;
+    // As redmine time entries do not have a time for spent_on, we need to start
+    // at the date's beginning, so we can figure out all entry relations of that
+    // day.
+    $day_from->setTime(0, 0, 0);
+
     // Run each day.
     while ($day_from < $global_to) {
 
