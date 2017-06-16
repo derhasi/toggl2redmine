@@ -608,7 +608,7 @@ class TimeEntrySync extends Command {
         'spent_on' => $entry->getTogglEntry()->getDateString(),
         'hours' => $entry->getTogglEntry()->getHours(),
         'activity_id' => $entry->getActivity()->id,
-        'comments' => $entry->getTogglEntry()->getDescription(),
+        'comments' => $this->escapeAmpersand($entry->getTogglEntry()->getDescription()),
       );
       // If there is already a redmine entry, we need to update that one.
       if ($entry->hasRedmineEntry()) {
@@ -636,6 +636,19 @@ class TimeEntrySync extends Command {
 
     // Update toggl entry with #synced Flag.
     $this->saveSynchedTogglTimeEntry($entry);
+  }
+
+  /**
+   * Helper to replace ampersand with SimpleXML::addChild() compliant escape.
+   *
+   * @param string $str
+   *
+   * @return string mixed
+   *
+   * @see \Redmine\Api\TimeEntry::create()
+   */
+  protected function escapeAmpersand($str) {
+    return preg_replace('/&(?![[:alnum:]]+;)/','&amp;', $str);
   }
 
   /**
