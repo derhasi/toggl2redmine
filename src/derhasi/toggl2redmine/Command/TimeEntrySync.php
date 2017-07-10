@@ -296,7 +296,7 @@ class TimeEntrySync extends Command {
 
     // Init toggl.
     $this->togglClient = TogglClient::factory(array('api_key' => $togglAPIKey));
-    $this->togglCurrentUser = $this->togglClient->getCurrentUser();
+    $this->togglCurrentUser = $this->togglClient->getCurrentUser()['data'];
     $this->togglWorkspaceID = $this->getWorkspaceID();
     if (empty($this->togglWorkspaceID)) {
       $this->output->writeln('<error>No Workspace given</error>');
