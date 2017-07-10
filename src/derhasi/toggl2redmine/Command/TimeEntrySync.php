@@ -8,6 +8,7 @@ use derhasi\toggl2redmine\TimeEntryCollection;
 use derhasi\toggl2redmine\TimeEntrySyncConfigWrapper;
 use derhasi\toggl2redmine\RedmineTimeEntryActivity;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -138,7 +139,6 @@ class TimeEntrySync extends Command {
     $this->question = $this->getHelper('question');
     $this->input = $input;
     $this->output = $output;
-    $this->progress = $this->getHelper('progress');
   }
 
   /**
@@ -499,12 +499,13 @@ class TimeEntrySync extends Command {
     }
 
     // Process each item.
-    $this->progress->start($this->output, count($process));
+    $progress = new ProgressBar($this->output, count($process));
+    $progress->start();
     foreach ($process as $entry) {
       $this->syncTimeEntry($entry);
-      $this->progress->advance();
+      $progress->advance();
     }
-    $this->progress->finish();
+    $progress->finish();
   }
 
   /**
