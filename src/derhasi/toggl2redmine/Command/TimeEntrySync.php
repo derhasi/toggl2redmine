@@ -8,6 +8,7 @@ use derhasi\toggl2redmine\TimeEntryCollection;
 use derhasi\toggl2redmine\TimeEntrySyncConfigWrapper;
 use derhasi\toggl2redmine\RedmineTimeEntryActivity;
 use Symfony\Component\Console\Command\Command;
+use Symfony\Component\Console\Helper\ProgressBar;
 use Symfony\Component\Console\Helper\Table;
 use Symfony\Component\Console\Input\InputArgument;
 use Symfony\Component\Console\Input\InputInterface;
@@ -58,11 +59,6 @@ class TimeEntrySync extends Command {
    * @var \Symfony\Component\Console\Output\OutputInterface
    */
   protected $output;
-
-  /**
-   * @var \Symfony\Component\Console\Helper\ProgressHelper
-   */
-  protected $progress;
 
   /**
    * @var array
@@ -138,7 +134,6 @@ class TimeEntrySync extends Command {
     $this->question = $this->getHelper('question');
     $this->input = $input;
     $this->output = $output;
-    $this->progress = $this->getHelper('progress');
   }
 
   /**
@@ -296,7 +291,7 @@ class TimeEntrySync extends Command {
 
     // Init toggl.
     $this->togglClient = TogglClient::factory(array('api_key' => $togglAPIKey));
-    $this->togglCurrentUser = $this->togglClient->getCurrentUser();
+    $this->togglCurrentUser = $this->togglClient->getCurrentUser()['data'];
     $this->togglWorkspaceID = $this->getWorkspaceID();
     if (empty($this->togglWorkspaceID)) {
       $this->output->writeln('<error>No Workspace given</error>');
@@ -499,12 +494,14 @@ class TimeEntrySync extends Command {
     }
 
     // Process each item.
-    $this->progress->start($this->output, count($process));
+    $progress = new ProgressBar($this->output, count($process));
+    $progress->start();
     foreach ($process as $entry) {
       $this->syncTimeEntry($entry);
-      $this->progress->advance();
+      $progress->advance();
     }
-    $this->progress->finish();
+    $progress->finish();
+    $this->output->writeln('');
   }
 
   /**
