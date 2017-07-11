@@ -61,11 +61,6 @@ class TimeEntrySync extends Command {
   protected $output;
 
   /**
-   * @var \Symfony\Component\Console\Helper\ProgressHelper
-   */
-  protected $progress;
-
-  /**
    * @var array
    */
   protected $config;
@@ -506,6 +501,7 @@ class TimeEntrySync extends Command {
       $progress->advance();
     }
     $progress->finish();
+    $this->output->writeln('');
   }
 
   /**
